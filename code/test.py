@@ -1,8 +1,11 @@
 import boto3
 import json
 import os 
+from dotenv import load_dotenv
 
-PINECONDE_KEY=${PINECONDE_KEY}
+load_dotenv()
+PINECONDE_KEY = os.getenv("PINECONDE_KEY")
+
 
 #bedrock = boto3.client("bedrock-runtime", region_name="us-west-2")  # use correct region
 
