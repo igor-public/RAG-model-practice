@@ -1,7 +1,7 @@
 import boto3
 import json
 import os 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -9,8 +9,11 @@ from pinecone import Pinecone, ServerlessSpec
 
 
 # --- Load environment ---
-load_dotenv()
+load_dotenv(find_dotenv("local.env"))
 PINECONE_KEY = os.getenv("PINECONE_KEY")
+
+print (PINECONE_KEY)
+
 
 
 # --- Config ---
@@ -134,7 +137,7 @@ if stream:
             if content: print(content, end="", flush=True)
 """
 if __name__ == "__main__":
-    docs = load_document("example.pdf")
+    docs = load_document("sample.pdf")
     chunks = split_document(docs)
 
     pc = init_pinecone()
@@ -146,3 +149,5 @@ if __name__ == "__main__":
     response = search_index(index, "What are adapter layers?")
     display_results(response)
     call_mistral("Explain adapter layers in simple terms.")
+
+    
