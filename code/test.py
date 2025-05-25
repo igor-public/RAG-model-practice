@@ -41,6 +41,7 @@ CLOUD = "aws"
 PINECONE_REGION = "us-east-1"
 
 model_prompt = "Explain the theory of relativity in simple terms."
+SEARCH_QUESTION = "What is the key advantages of LoRA?"
 query_prompt="what is the adapter Layers and Inference Latency"
 
 #RAG-model-practice/code/test.py    
@@ -207,7 +208,7 @@ if __name__ == "__main__":
     # docs = load_document("sample.pdf")
     # chunks = split_document(docs)
 
-    '''
+    
     
     pc = init_pinecone()
     index = get_index(pc,INDEX_NAME)
@@ -215,16 +216,16 @@ if __name__ == "__main__":
     # index = create_index(pc)
     # upload_to_pinecone(index, chunks)
 
-    response = search_index(index, "What are the adapter layers?")
+    response = search_index(index, SEARCH_QUESTION)
     # display_results(response)
 
     context = "\n".join([match['metadata']['text'] for match in response['matches']])
     print(f"the conext: {context}")
-    '''
-
-    #prompt = f"Context: {context}\n\nQuestion: {query_prompt}\n\nAnswer:"
     
-    prompt = query_prompt
+
+    prompt = f"Context: {context}\n\nQuestion: {SEARCH_QUESTION}\n\nAnswer:"
+    
+    #prompt = query_prompt
     print (prompt)
     call_mistral(prompt)
 
