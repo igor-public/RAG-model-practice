@@ -1,7 +1,7 @@
 import boto3
 import json
 import os 
-import logging
+import logging, pprint
 from dotenv import load_dotenv, find_dotenv
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -29,7 +29,7 @@ logger.debug(PINECONE_KEY)
 
 # --- Config ---
 MODEL_ID = "mistral.mistral-large-2407-v1:0"
-MODEL_TEMPERATURE = 1
+MODEL_TEMPERATURE = 0.8
 MAX_TOKENS = 2048
 REGION = "us-west-2"
 RUNTIME = "bedrock-runtime"
@@ -69,10 +69,11 @@ def split_document(docs):
     return splitter.split_documents(docs)
 
 logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+logging.getLogger("botocore.credentials").setLevel(logging.WARNING)
 
-# embedding_model = HuggingFaceEmbeddings(
-#     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-# )
+embedding_model = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+)
 
 # --- Pinecone index ---
 def create_index(pc: Pinecone):
@@ -133,10 +134,10 @@ def display_results(response):
 
 def call_mistral(prompt: str):
 
-    print (prompt)
 
+    first = True
     bedrock = init_bedrock()
-    
+
     response = bedrock.invoke_model_with_response_stream(
         modelId=MODEL_ID,
         body=json.dumps({
@@ -150,29 +151,21 @@ def call_mistral(prompt: str):
         accept="application/json"
     )
 
-    print("returning the stream ")
-
-
     stream = response["body"]
-
-    print(stream)
+    #print(stream)
     
     for event in stream:         # event-stream iterator
        
         chunk = event.get("chunk")
-
-    
-        print(chunk)
 
         if not chunk:
             continue                       # ping / keep-alive / error entries
 
         data = json.loads(chunk["bytes"])
 
-        token = data.get("choices", [{}])[0].get("delta", {}).get("content", "")
-        
-        # If you ever switch to the text-completion endpoint, use:
-        # token = data.get("outputs", [{}])[0].get("text", "")
+        if data: 
+            token = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            #token = data.get("outputs", [{}])[0].get("text", "")
         
         if token:
             print(token, end="", flush=True)
@@ -217,16 +210,11 @@ if __name__ == "__main__":
     '''
     
     pc = init_pinecone()
-   
     index = get_index(pc,INDEX_NAME)
-    
     # delete_index(pc, INDEX_NAME)  
-      
     # index = create_index(pc)
-    
     # upload_to_pinecone(index, chunks)
 
-    
     response = search_index(index, "What are the adapter layers?")
     # display_results(response)
 
