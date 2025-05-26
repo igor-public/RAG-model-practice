@@ -29,7 +29,7 @@ logger.debug(PINECONE_KEY)
 # --- Config ---
 MODEL_ID = RAGConfig.model_id
 MODEL_TEMPERATURE = 0.8
-MAX_TOKENS = 2048
+MAX_TOKENS = 512
 REGION = "us-west-2"
 RUNTIME = "bedrock-runtime"
 
@@ -176,12 +176,26 @@ def call_mistral(prompt: str):
 
     bedrock = init_bedrock()
 
-    messages = [{"role": "user", "content": prompt}]
+    # messages = [{"role": "user", "content": prompt}]
+
+    messages = [
+    {
+        "role": "system",
+        "content": prompt.join(
+            "\n You have to call the tool `search_document` to look things up.\n"
+            "Here is the document collection you have access to:\n"
+            "• doc_1  –  All about LoRA and its key advantages \n"
+            "When a user asks a question that might be answered by the document "
+            "call the tool with an English query that would find the "
+            "right passages."
+        )
+    },
+    ]
 
     response = bedrock.invoke_model_with_response_stream(
         modelId=MODEL_ID,
         body=json.dumps({
-            "prompt": prompt,
+            "prompt": messages,
             "max_tokens": MAX_TOKENS,
             "temperature": MODEL_TEMPERATURE,
             "stream": True,
@@ -221,8 +235,8 @@ def call_mistral(prompt: str):
         if data.get("choices", [{}])[0].get("finish_reason") == "stop":
             break
 
-    if tool_calls:
-        logger.info("\nMistral decided to search documents...")
+    if True:
+        logger.info("\n Mistral decided to search documents... ++++++++++++++++++++++++++++++++++")
         
         for tool_call in tool_calls:
             if tool_call["function"]["name"] == "search_documents":
