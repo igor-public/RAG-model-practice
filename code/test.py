@@ -179,24 +179,31 @@ def call_mistral(prompt: str):
     # messages = [{"role": "user", "content": prompt}]
 
     messages = [
-    {
+    {   
         "role": "system",
-        "content": prompt.join(
-            "\n You have to call the tool `search_document` to look things up.\n"
-            "Here is the document collection you have access to:\n"
-            "• doc_1  –  All about LoRA and its key advantages \n"
-            "When a user asks a question that might be answered by the document "
-            "call the tool with an English query that would find the "
-            "right passages."
+        "content": (
+            "You are an assistant that can call the function `search_document` "
+            "to answer questions.\n"
+            "Document catalogue:\n"
+            "• doc_1 – All about LoRA and its key advantages.\n\n"
+            "When the user asks something that may be answered by doc_1, "
+            "call the tool and pass an English search query that will return "
+            "the relevant passages."
         )
     },
+    {  
+        "role": "user",
+        "content": prompt
+    }
     ]
 
     response = bedrock.invoke_model_with_response_stream(
         modelId=MODEL_ID,
         body=json.dumps({
-            "prompt": messages,
+            "messages": messages,
             "max_tokens": MAX_TOKENS,
+            "tool_choice": "auto",
+            "tools": TOOLS,
             "temperature": MODEL_TEMPERATURE,
             "stream": True,
             "top_p": 1
@@ -221,7 +228,8 @@ def call_mistral(prompt: str):
         data = json.loads(chunk["bytes"])
 
        # Check for tool calls in the response
-        if "tool_calls" in data.get("choices", [{}])[0].get("messsage", {}):
+        if "tool_calls" in data.get("choices", [{}])[0].get("message", {}).get("content", ""):
+            logger.info("\n TOOLS called")
             tool_calls.extend(data["choices"][0]["message"]["tool_calls"])
 
         token = data.get("choices", [{}])[0].get("message", {}).get("content", "")
@@ -235,7 +243,7 @@ def call_mistral(prompt: str):
         if data.get("choices", [{}])[0].get("finish_reason") == "stop":
             break
 
-    if True:
+    if tool_calls:
         logger.info("\n Mistral decided to search documents... ++++++++++++++++++++++++++++++++++")
         
         for tool_call in tool_calls:
