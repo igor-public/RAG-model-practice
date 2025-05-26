@@ -215,10 +215,20 @@ def call_mistral(prompt: str):
     full_response = ""
     tool_calls = []
 
-    stream = response["body"]
-
     logger.info("\nCalling mistral now ...")
 
+
+    stream = response.get("body")
+
+    for i, event in enumerate(stream, 1):
+        chunk = event.get("chunk")
+        if not chunk:
+            continue
+
+        data = json.loads(chunk["bytes"])
+        logger.info("Chunk %02d = %s", i, json.dumps(data, indent=2))
+        if i == 5:
+            break
 
     for event in stream:         # event-stream iterator
         chunk = event.get("chunk")
@@ -226,38 +236,48 @@ def call_mistral(prompt: str):
             continue                       # ping / keep-alive / error entries
 
         data = json.loads(chunk["bytes"])
+        choice = data["choices"][0]
 
-       # Check for tool calls in the response
-        if "tool_calls" in data.get("choices", [{}])[0].get("message", {}).get("content", ""):
-            logger.info("\n TOOLS called")
-            tool_calls.extend(data["choices"][0]["message"]["tool_calls"])
+        token = (
+            choice.get("delta",   {}).get("content")    # incremental
+            or choice.get("message", {}).get("content", "")  # final
+        )
 
-        token = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-    
-        
         if token:
             print(token, end="", flush=True)
             full_response += token
 
-        # graceful stop once the model says it’s done
-        if data.get("choices", [{}])[0].get("finish_reason") == "stop":
+        tc = (
+            choice.get("delta",   {}).get("tool_calls")
+            or choice.get("message", {}).get("tool_calls")
+        )
+
+        if tc:                                   
+            tool_calls.extend(tc)
+
+        if choice.get("finish_reason") == "stop":
             break
 
-    if tool_calls:
-        logger.info("\n Mistral decided to search documents... ++++++++++++++++++++++++++++++++++")
+    if not tool_calls:
+        print("\n")                  
+        return
+
+      
+
+    if tc in tool_calls:
+
+        logger.info("\n Mistral search in the document... ++++++++++++++++++++++++++++++++++")
         
-        for tool_call in tool_calls:
-            if tool_call["function"]["name"] == "search_documents":
-                args = json.loads(tool_call["function"]["arguments"])
+        for tc in tool_calls:
+            if tc["function"]["name"] == "search_document":
+                args = json.loads(tc["function"]["arguments"])
                 search_result = search_docuemnt(args["query"])
                 
-                # Continue conversation with search results
                 messages.extend([
-                    {"role": "assistant", "tool_calls": tool_calls},
-                    {"role": "tool", "tool_call_id": tool_call["id"], "content": search_result}
+                    {"role": "assistant", "tool_calls": [tc]},
+                    {"role": "tool", "tool_call_id": tc["id"], "content": search_result}
                 ])
         
-        # Final response with search context
         print("\n\nProcessing search results...\n")
         
         final_response = bedrock.invoke_model_with_response_stream(
@@ -272,18 +292,24 @@ def call_mistral(prompt: str):
             accept="application/json"
         )
         
+ 
         for event in final_response["body"]:
             chunk = event.get("chunk")
             if not chunk:
                 continue
                 
             data = json.loads(chunk["bytes"])
-            token = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            if token:
+            choice = data["choices"][0]
+
+            token = (
+                choice.get("delta",   {}).get("content") or choice.get("message", {}).get("content", "")
+            )
+
+            if token: 
                 print(token, end="", flush=True)
-            
-            if data.get("choices", [{}])[0].get("finish_reason") == "stop":
+            if choice.get("finish_reason") == "stop":
                 break
+        print() 
 
     #result = json.loads(response['body'].read())
     #answer = result["choices"][0]["message"]["content"]
