@@ -219,8 +219,8 @@ def call_mistral(prompt: str):
 
 
     stream = response.get("body")
-
-    for i, event in enumerate(stream, 1):
+    '''
+    for i, event in enumerate(stream, 3):
         chunk = event.get("chunk")
         if not chunk:
             continue
@@ -229,18 +229,19 @@ def call_mistral(prompt: str):
         logger.info("Chunk %02d = %s", i, json.dumps(data, indent=2))
         if i == 5:
             break
-
-    for event in stream:         # event-stream iterator
+    '''
+    stream = response.get("body")
+    for event in stream:         
         chunk = event.get("chunk")
         if not chunk:
-            continue                       # ping / keep-alive / error entries
+            continue                       
 
         data = json.loads(chunk["bytes"])
         choice = data["choices"][0]
 
         token = (
-            choice.get("delta",   {}).get("content")    # incremental
-            or choice.get("message", {}).get("content", "")  # final
+            choice.get("delta",   {}).get("content")    
+            or choice.get("message", {}).get("content", "") or ""
         )
 
         if token:
@@ -249,17 +250,17 @@ def call_mistral(prompt: str):
 
         tc = (
             choice.get("delta",   {}).get("tool_calls")
-            or choice.get("message", {}).get("tool_calls")
+            or choice.get("message", {}).get("tool_calls") or []
         )
 
         if tc:                                   
             tool_calls.extend(tc)
 
-        if choice.get("finish_reason") == "stop":
+        if choice.get("finish_reason") in ("stop","tool_calls"):
             break
 
     if not tool_calls:
-        print("\n")                  
+        print("")                  
         return
 
       
@@ -275,7 +276,11 @@ def call_mistral(prompt: str):
                 
                 messages.extend([
                     {"role": "assistant", "tool_calls": [tc]},
-                    {"role": "tool", "tool_call_id": tc["id"], "content": search_result}
+                    {
+                     "role": "tool", 
+                     "tool_call_id": tc["id"], 
+                     "content": search_result,
+                     }
                 ])
         
         print("\n\nProcessing search results...\n")
@@ -302,7 +307,7 @@ def call_mistral(prompt: str):
             choice = data["choices"][0]
 
             token = (
-                choice.get("delta",   {}).get("content") or choice.get("message", {}).get("content", "")
+                choice.get("delta",   {}).get("content") or choice.get("message", {}).get("content", "") or ""
             )
 
             if token: 
