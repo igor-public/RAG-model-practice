@@ -28,8 +28,8 @@ logger.debug(PINECONE_KEY)
 
 # --- Config ---
 MODEL_ID = RAGConfig.model_id
-MODEL_TEMPERATURE = 0.8
-MAX_TOKENS = 512
+MODEL_TEMPERATURE = RAGConfig.model_temperature
+MAX_TOKENS = RAGConfig.max_tokens
 REGION = "us-west-2"
 RUNTIME = "bedrock-runtime"
 
@@ -176,8 +176,6 @@ def call_mistral(prompt: str):
 
     bedrock = init_bedrock()
 
-    # messages = [{"role": "user", "content": prompt}]
-
     messages = [
     {   
         "role": "system",
@@ -217,8 +215,8 @@ def call_mistral(prompt: str):
 
     logger.info("\nCalling mistral now ...")
 
-
     stream = response.get("body")
+    
     '''
     for i, event in enumerate(stream, 3):
         chunk = event.get("chunk")
@@ -230,7 +228,7 @@ def call_mistral(prompt: str):
         if i == 5:
             break
     '''
-    stream = response.get("body")
+    
     for event in stream:         
         chunk = event.get("chunk")
         if not chunk:
@@ -260,14 +258,22 @@ def call_mistral(prompt: str):
             break
 
     if not tool_calls:
-        print("")                  
+        print("No calls for TOOLS where seen")                  
         return
 
+
+    print (f"the length of tc: '{len(tc)}' \n\n", end="", flush=True) 
+    
+    pprint.pprint(tc) 
+    
+    print("\n\nTool calls found:\n")
+    
+    pprint.pprint(tool_calls) 
       
 
-    if tc in tool_calls:
+    if tc and all(item in tool_calls for item in tc):
 
-        logger.info("\n Mistral search in the document... ++++++++++++++++++++++++++++++++++")
+        logger.info("\n Tool initiated ++++++++++++")
         
         for tc in tool_calls:
             if tc["function"]["name"] == "search_document":
