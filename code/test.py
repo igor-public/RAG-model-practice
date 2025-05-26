@@ -2,7 +2,7 @@ import boto3
 import json
 import os 
 import logging, pprint
-import RAGConfig
+from code.RAGConfig import RAGConfig
 from dotenv import load_dotenv, find_dotenv
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -112,17 +112,36 @@ def upload_to_pinecone(ind: Pinecone.Index, chunks):
     logger.info(f"Uploading '{len(to_upsert)}' vectors to Pinecone index:  '{INDEX_NAME}'")
     ind.upsert(vectors=to_upsert)
 
-def search_index(index, query: str):
+def search_index(index, query: str)  -> str:
 
-    logger.info(f"Query : '{query}'")
+    logger.info(f"Tool called - searching for: '{query}'")
 
     vector = embedding_model.embed_query(query)
     
-    logger.debug(f"Vector:  '{vector}'")
+    response = index.query(vector=vector, top_k=10, include_metadata=True, include_values=True)
+
+    if not response.get('matches'):
+        return "No relevant documents found."
+
+    context_pieces = []
+
+    for match in response['matches']:
+        text = match.get('metadata', {}).get('text', '')
+        score = match['score']
+        context_pieces.append(f"[Relevance: {score:.3f}] {text}")
+
+    return "\n\n".join(context_pieces)
+
+
+def search_docuemnt(query: str)  -> str:
+
+    pc = init_pinecone()
+    index = get_index(pc,INDEX_NAME)
     
-    return index.query(vector=vector, top_k=3, include_metadata=True, include_values=True)
+    return search_index(index, query)
 
 def display_results(response):
+
     matches = response.get('matches', [])
     logger.info(f"Found {len(matches)} matching documents")
     
@@ -136,8 +155,8 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "search_documents",
-            "description": "Search through uploaded documents to find relevant information. Use this when you need specific information that might be in the document collection.",
+            "name": "search_document",
+            "description": "Search through the uploaded document to find relevant information. Use this when you need specific information that might be in the document collection.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -155,9 +174,9 @@ TOOLS = [
 
 def call_mistral(prompt: str):
 
-
-    first = True
     bedrock = init_bedrock()
+
+    messages = [{"role": "user", "content": prompt}]
 
     response = bedrock.invoke_model_with_response_stream(
         modelId=MODEL_ID,
@@ -172,29 +191,77 @@ def call_mistral(prompt: str):
         accept="application/json"
     )
 
-    stream = response["body"]
+    full_response = ""
     tool_calls = []
-    
-    for event in stream:         # event-stream iterator
-       
-        chunk = event.get("chunk")
 
+    stream = response["body"]
+
+    logger.info("\nCalling mistral now ...")
+
+
+    for event in stream:         # event-stream iterator
+        chunk = event.get("chunk")
         if not chunk:
             continue                       # ping / keep-alive / error entries
 
         data = json.loads(chunk["bytes"])
 
-        if data: 
-            token = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            #token = data.get("outputs", [{}])[0].get("text", "")
+       # Check for tool calls in the response
+        if "tool_calls" in data.get("choices", [{}])[0].get("messsage", {}):
+            tool_calls.extend(data["choices"][0]["message"]["tool_calls"])
+
+        token = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    
         
         if token:
             print(token, end="", flush=True)
+            full_response += token
 
         # graceful stop once the model says it’s done
         if data.get("choices", [{}])[0].get("finish_reason") == "stop":
             break
 
+    if tool_calls:
+        logger.info("\nMistral decided to search documents...")
+        
+        for tool_call in tool_calls:
+            if tool_call["function"]["name"] == "search_documents":
+                args = json.loads(tool_call["function"]["arguments"])
+                search_result = search_docuemnt(args["query"])
+                
+                # Continue conversation with search results
+                messages.extend([
+                    {"role": "assistant", "tool_calls": tool_calls},
+                    {"role": "tool", "tool_call_id": tool_call["id"], "content": search_result}
+                ])
+        
+        # Final response with search context
+        print("\n\nProcessing search results...\n")
+        
+        final_response = bedrock.invoke_model_with_response_stream(
+            modelId=MODEL_ID,
+            body=json.dumps({
+                "messages": messages,
+                "max_tokens": MAX_TOKENS,
+                "temperature": MODEL_TEMPERATURE,
+                "stream": True
+            }),
+            contentType="application/json",
+            accept="application/json"
+        )
+        
+        for event in final_response["body"]:
+            chunk = event.get("chunk")
+            if not chunk:
+                continue
+                
+            data = json.loads(chunk["bytes"])
+            token = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if token:
+                print(token, end="", flush=True)
+            
+            if data.get("choices", [{}])[0].get("finish_reason") == "stop":
+                break
 
     #result = json.loads(response['body'].read())
     #answer = result["choices"][0]["message"]["content"]
@@ -225,28 +292,28 @@ if stream:
 """
 
 if __name__ == "__main__":
+    
     # docs = load_document("sample.pdf")
     # chunks = split_document(docs)
 
     
     
-    pc = init_pinecone()
-    index = get_index(pc,INDEX_NAME)
+    # pc = init_pinecone()
+    # index = get_index(pc,INDEX_NAME)
     # delete_index(pc, INDEX_NAME)  
     # index = create_index(pc)
     # upload_to_pinecone(index, chunks)
 
-    response = search_index(index, SEARCH_QUESTION)
+    # response = search_index(index, SEARCH_QUESTION)
     # display_results(response)
 
-    context = "\n".join([match['metadata']['text'] for match in response['matches']])
-    print(f"the conext: {context}")
+    # context = "\n".join([match['metadata']['text'] for match in response['matches']])
+    # print(f"the conext: {context}")
     
 
-    prompt = f"Context: {context}\n\nQuestion: {SEARCH_QUESTION}\n\nAnswer:"
-    
-    #prompt = query_prompt
+    prompt = f"Q: {SEARCH_QUESTION}\n\nAnswer:"
     print (prompt)
+
     call_mistral(prompt)
 
     
