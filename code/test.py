@@ -2,6 +2,7 @@ import boto3
 import json
 import os 
 import logging, pprint
+import RAGConfig
 from dotenv import load_dotenv, find_dotenv
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -19,8 +20,6 @@ logger = logging.getLogger(__name__)
 
 # --- Load environment ---
 load_dotenv(find_dotenv("local.env"))
-
-
 PINECONE_KEY = os.getenv("PINECONE_KEY")
 
 logger.debug(PINECONE_KEY)
@@ -28,7 +27,7 @@ logger.debug(PINECONE_KEY)
 
 
 # --- Config ---
-MODEL_ID = "mistral.mistral-large-2407-v1:0"
+MODEL_ID = RAGConfig.model_id
 MODEL_TEMPERATURE = 0.8
 MAX_TOKENS = 2048
 REGION = "us-west-2"
@@ -132,6 +131,27 @@ def display_results(response):
         logger.info(f"Text: {match.get('metadata', {}).get('text', '[No text found]')}")
         logger.debug(f"Metadata: {match.get('metadata')}")
 
+# Define available tools for Mistral
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_documents",
+            "description": "Search through uploaded documents to find relevant information. Use this when you need specific information that might be in the document collection.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to find relevant documents"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
+
 
 def call_mistral(prompt: str):
 
@@ -153,7 +173,7 @@ def call_mistral(prompt: str):
     )
 
     stream = response["body"]
-    #print(stream)
+    tool_calls = []
     
     for event in stream:         # event-stream iterator
        
