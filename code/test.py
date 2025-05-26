@@ -30,14 +30,14 @@ logger.debug(PINECONE_KEY)
 MODEL_ID = RAGConfig.model_id
 MODEL_TEMPERATURE = RAGConfig.model_temperature
 MAX_TOKENS = RAGConfig.max_tokens
-REGION = "us-west-2"
-RUNTIME = "bedrock-runtime"
+MODEL_REGION = RAGConfig.model_aws_region
+MODEL_RUNTIME = RAGConfig.model_runtime
 
-INDEX_NAME = "ia-index"
-EMBEDDING_DIM = 384
-METRIC = "cosine"
-CLOUD = "aws"
-PINECONE_REGION = "us-east-1"
+INDEX_NAME =    RAGConfig.index_name
+EMBEDDING_DIM =     RAGConfig.embedding_dim
+METRIC =    RAGConfig.metric
+CLOUD =     RAGConfig.cloud
+PINECONE_REGION =   RAGConfig.pinecone_region
 
 model_prompt = "Explain the theory of relativity in simple terms."
 SEARCH_QUESTION = "What is the key advantages of LoRA?"
@@ -47,7 +47,7 @@ query_prompt="what is the adapter Layers and Inference Latency"
 
 def init_bedrock():
     session = boto3.Session()
-    return session.client(RUNTIME, region_name=REGION)
+    return session.client(MODEL_RUNTIME, region_name=MODEL_REGION)
 
 def init_pinecone() -> Pinecone:
     return Pinecone(api_key=PINECONE_KEY)
@@ -213,7 +213,7 @@ def call_mistral(prompt: str):
     full_response = ""
     tool_calls = []
 
-    logger.info("\nCalling mistral now ...")
+    logger.info(f"\n {RAGConfig.model_id} called now ...")
 
     stream = response.get("body")
     
@@ -262,23 +262,24 @@ def call_mistral(prompt: str):
         return
 
 
-    print (f"the length of tc: '{len(tc)}' \n\n", end="", flush=True) 
+    #print (f"the length of tc: '{len(tc)}' \n\n", end="", flush=True) 
     
-    pprint.pprint(tc) 
+    #pprint.pprint(tc) 
     
-    print("\n\nTool calls found:\n")
+    #print("\n\nTool calls found:\n")
     
-    pprint.pprint(tool_calls) 
+    #pprint.pprint(tool_calls) 
       
 
     if tc and all(item in tool_calls for item in tc):
 
-        logger.info("\n Tool initiated ++++++++++++")
+        logger.info("\n Tools initiated ++++++++++++")
         
         for tc in tool_calls:
             if tc["function"]["name"] == "search_document":
                 args = json.loads(tc["function"]["arguments"])
                 search_result = search_docuemnt(args["query"])
+                logger.info(f"Search result for query '{args['query']}':\n{search_result}")
                 
                 messages.extend([
                     {"role": "assistant", "tool_calls": [tc]},
@@ -288,6 +289,8 @@ def call_mistral(prompt: str):
                      "content": search_result,
                      }
                 ])
+                
+                
         
         print("\n\nProcessing search results...\n")
         

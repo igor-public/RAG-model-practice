@@ -6,7 +6,8 @@ class RAGConfig:
     model_id: str = "mistral.mistral-large-2407-v1:0"
     model_temperature: float = 0.4
     max_tokens: int = 2048
-    aws_region: str = "us-west-2"
+    model_aws_region: str = "us-west-2"
+    model_runtime: str = "bedrock-runtime"
     
     # Pinecone Config
     index_name: str = "ia-index"
