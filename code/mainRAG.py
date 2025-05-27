@@ -72,7 +72,7 @@ def init_bedrock():
 
 
 def init_pinecone() -> Pinecone:
-    return PineconeMager.(api_key=PINECONE_KEY)
+    return PineconeMager.init(api_key=PINECONE_KEY)
 
 
 def get_index(pc: Pinecone, index_name: str):
@@ -213,193 +213,10 @@ TOOLS = [
 ]
 
 
-def call_mistral(prompt: str):
-
-    BedrockManager.init()
-    
-    #bedrock = init_bedrock()
-
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are an assistant that can call the function `search_document` "
-                "to answer questions.\n"
-                "Document catalogue:\n"
-                "• doc_1 – All about LoRA and its key advantages.\n\n"
-                "When the user asks something that may be answered by doc_1, "
-                "call the tool and pass an English search query that will return "
-                "the relevant passages."
-            ),
-        },
-        {"role": "user", "content": prompt},
-    ]
-
-    response = bedrock.invoke_model_with_response_stream(
-        modelId=MODEL_ID,
-        body=json.dumps(
-            {
-                "messages": messages,
-                "max_tokens": MAX_TOKENS,
-                "tool_choice": "auto",
-                "tools": TOOLS,
-                "temperature": MODEL_TEMPERATURE,
-                "stream": True,
-                "top_p": 1,
-            }
-        ),
-        contentType="application/json",
-        accept="application/json",
-    )
-
-    full_response = ""
-    tool_calls = []
-
-    logger.info(f"\n {RAGConfig.model_id} called now ...")
-
-    stream = response.get("body")
-
-    """
-    for i, event in enumerate(stream, 3):
-        chunk = event.get("chunk")
-        if not chunk:
-            continue
-
-        data = json.loads(chunk["bytes"])
-        logger.info("Chunk %02d = %s", i, json.dumps(data, indent=2))
-        if i == 5:
-            break
-    """
-
-    for event in stream:
-        chunk = event.get("chunk")
-        if not chunk:
-            continue
-
-        data = json.loads(chunk["bytes"])
-        choice = data["choices"][0]
-
-        token = (
-            choice.get("delta", {}).get("content")
-            or choice.get("message", {}).get("content", "")
-            or ""
-        )
-
-        if token:
-            print(token, end="", flush=True)
-            full_response += token
-
-        tc = (
-            choice.get("delta", {}).get("tool_calls")
-            or choice.get("message", {}).get("tool_calls")
-            or []
-        )
-
-        if tc:
-            tool_calls.extend(tc)
-
-        if choice.get("finish_reason") in ("stop", "tool_calls"):
-            break
-
-    if not tool_calls:
-        print("No calls for TOOLS where seen")
-        return
-
-    # print (f"the length of tc: '{len(tc)}' \n\n", end="", flush=True)
-
-    # pprint.pprint(tc)
-
-    # print("\n\nTool calls found:\n")
-
-    # pprint.pprint(tool_calls)
-
-    if tc and all(item in tool_calls for item in tc):
-
-        logger.info("\n Tools initiated ++++++++++++")
-
-        for tc in tool_calls:
-            if tc["function"]["name"] == "search_document":
-                args = json.loads(tc["function"]["arguments"])
-                search_result = PineconeMager.search_document(args["query"])
-                logger.info(
-                    f"Search result for query '{args['query']}':\n{search_result}"
-                )
-
-                messages.extend(
-                    [
-                        {"role": "assistant", "tool_calls": [tc]},
-                        {
-                            "role": "tool",
-                            "tool_call_id": tc["id"],
-                            "content": search_result,
-                        },
-                    ]
-                )
-
-        print("\n\nProcessing search results...\n")
-
-        final_response = bedrock.invoke_model_with_response_stream(
-            modelId=MODEL_ID,
-            body=json.dumps(
-                {
-                    "messages": messages,
-                    "max_tokens": MAX_TOKENS,
-                    "temperature": MODEL_TEMPERATURE,
-                    "stream": True,
-                }
-            ),
-            contentType="application/json",
-            accept="application/json",
-        )
-
-        for event in final_response["body"]:
-            chunk = event.get("chunk")
-            if not chunk:
-                continue
-
-            data = json.loads(chunk["bytes"])
-            choice = data["choices"][0]
-
-            token = (
-                choice.get("delta", {}).get("content")
-                or choice.get("message", {}).get("content", "")
-                or ""
-            )
-
-            if token:
-                print(token, end="", flush=True)
-            if choice.get("finish_reason") == "stop":
-                break
-        print()
-
-    # result = json.loads(response['body'].read())
-    # answer = result["choices"][0]["message"]["content"]
-    # logger.info(answer)
-
 
 # Streaming delivery
 
-"""
- response = bedrock.invoke_model_with_response_stream(
-        modelId=modelID,
-        body=json.dumps({
-            "prompt": prompt,
-            "max_tokens": max_tokens,
-            "temperature": model_temperature,
-            "top_p": 1
-        }),
-        contentType="application/json",
-        accept="application/json"
 
-stream = response.get('body')
-if stream:
-    for event in stream:
-        chunk = event.get('chunk')
-        if chunk:
-            chunk_obj = json.loads(chunk.get('bytes').decode())
-            content = (chunk_obj.get("choices", [{}])[0].get("message", {}).get("content", ""))
-            if content: logger.info(content, end="", flush=True)
-"""
 
 if __name__ == "__main__":
 
@@ -418,7 +235,8 @@ if __name__ == "__main__":
     # context = "\n".join([match['metadata']['text'] for match in response['matches']])
     # print(f"the conext: {context}")
 
-    prompt = f"Q: {SEARCH_QUESTION}\n\nAnswer:"
-    print(prompt)
 
-    call_mistral(prompt)
+    pc = PineconeMager(api_key=PINECONE_KEY)
+    prompt = f"Q: {SEARCH_QUESTION}\n\nAnswer:"
+    
+    BedrockManager.getModelResponse_stream(prompt)
