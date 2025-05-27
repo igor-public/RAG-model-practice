@@ -1,3 +1,5 @@
 local.env
 .env
-
+# Byte-compiled files
+__pycache__/
+*.py[cod]
