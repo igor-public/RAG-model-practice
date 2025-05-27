@@ -3,9 +3,8 @@ import logging
 import RAGConfig
 
 from typing import List, Dict, Any
-from dotenv import load_dotenv, find_dotenv
 from langchain.schema import Document
-from RAGConfig import RAGSystemError
+from RAGConfig import RAGSystemException
 from pinecone import Pinecone, ServerlessSpec
 
 logging.basicConfig(
@@ -26,19 +25,19 @@ class PineconeManager:
     
     @property
     def client(self) -> Pinecone:
-        """Lazy loading of Pinecone client"""
+        # Lazy load - Pinecone client
         if self._client is None:
             try:
                 self._client = Pinecone(api_key=self.api_key)
                 logger.info("Initialized Pinecone client")
             except Exception as e:
                 logger.error(f"Error initializing Pinecone: {str(e)}")
-                raise RAGSystemError(f"Failed to initialize Pinecone: {str(e)}")
+                raise RAGSystemException(f"Failed to initialize Pinecone: {str(e)}")
         
         return self._client
     
     def ensure_index(self) -> Any:
-        """Ensure index exists, create if necessary"""
+    
         try:
             existing_indexes = [idx.name for idx in self.client.list_indexes()]
             
@@ -62,10 +61,12 @@ class PineconeManager:
             
         except Exception as e:
             logger.error(f"Error with index operations: {str(e)}")
-            raise RAGSystemError(f"Failed to ensure index: {str(e)}")
+            raise RAGSystemException(f"Failed to ensure index: {str(e)}")
+    
+     # Delete vectors if present
     
     def delete_index(self) -> None:
-        """Delete index if it exists"""
+        
         try:
             existing_indexes = [idx.name for idx in self.client.list_indexes()]
             
@@ -77,7 +78,10 @@ class PineconeManager:
                 
         except Exception as e:
             logger.error(f"Error deleting index: {str(e)}")
-            raise RAGSystemError(f"Failed to delete index: {str(e)}")
+            raise RAGSystemException(f"Failed to delete index: {str(e)}")
+    
+    
+    # Uploading vectors to Pinecone
     
     def upsert_vectors(self, vectors: List[List[float]], chunks: List[Document]) -> None:
         """Upsert vectors to Pinecone with batch processing"""
@@ -87,7 +91,8 @@ class PineconeManager:
             
             index = self.ensure_index()
             
-            # Prepare vectors for upsert
+            # Prepare vectors 
+            
             to_upsert = [
                 {
                     "id": f"doc-{i}",
@@ -111,7 +116,7 @@ class PineconeManager:
             
         except Exception as e:
             logger.error(f"Error upserting vectors: {str(e)}")
-            raise RAGSystemError(f"Failed to upsert vectors: {str(e)}")
+            raise RAGSystemException(f"Failed to upsert vectors: {str(e)}")
     
     def search(self, query_vector: List[float]) -> Dict[str, Any]:
         """Search for similar vectors"""
@@ -139,4 +144,4 @@ class PineconeManager:
             
         except Exception as e:
             logger.error(f"Error searching vectors: {str(e)}")
-            raise RAGSystemError(f"Failed to search vectors: {str(e)}")
+            raise RAGSystemException(f"Failed to search vectors: {str(e)}")

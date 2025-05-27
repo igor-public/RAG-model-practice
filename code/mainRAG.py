@@ -2,12 +2,16 @@ import boto3
 import json
 import os
 import logging, pprint
-from code.RAGConfig import RAGConfig
+from functools import wraps
+from code.RAGConfig import RAGConfig, RAGSystemException
 from dotenv import load_dotenv, find_dotenv
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from pinecone import Pinecone, ServerlessSpec
+import BedrockManager
+from PineconeManager import PineconeMager, Pinecone
+from DocumentProcessor import DocumentProcessor
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,7 +21,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# --- Load environment ---
+def safe(fn):
+
+    """
+    All exceptions are logged and raised again as ``RAGSystemException``. 
+    """
+
+    @wraps(fn)
+    def _wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except RAGSystemException:
+            raise                                     
+        except Exception as exc:                      
+            logger.error("%s failed: %s", fn.__name__, exc, exc_info=True)
+            raise RAGSystemException(str(exc)) from exc
+
+    return _wrapper
+
+# Environment variables. Requires PINECONE_KEY (free tier)
+
 load_dotenv(find_dotenv("local.env"))
 PINECONE_KEY = os.getenv("PINECONE_KEY")
 
@@ -43,14 +66,13 @@ query_prompt = "what is the adapter Layers and Inference Latency"
 
 # RAG-model-practice/code/test.py
 
-
 def init_bedrock():
     session = boto3.Session()
     return session.client(MODEL_RUNTIME, region_name=MODEL_REGION)
 
 
 def init_pinecone() -> Pinecone:
-    return Pinecone(api_key=PINECONE_KEY)
+    return PineconeMager.(api_key=PINECONE_KEY)
 
 
 def get_index(pc: Pinecone, index_name: str):
@@ -82,6 +104,7 @@ embedding_model = HuggingFaceEmbeddings(
 
 
 # --- Pinecone index ---
+
 def create_index(pc: Pinecone):
     index = pc.create_index(
         name=INDEX_NAME,
@@ -105,6 +128,7 @@ def delete_index(pc: Pinecone, index_name: str):
 
 
 def upload_to_pinecone(ind: Pinecone.Index, chunks):
+    
     logger.info(f"Uploading '{len(chunks)}' chunks to Pinecone index:  '{INDEX_NAME}'")
     vectors = embedding_model.embed_documents([doc.page_content for doc in chunks])
     to_upsert = [
@@ -148,7 +172,7 @@ def search_index(index, query: str) -> str:
     return "\n\n".join(context_pieces)
 
 
-def search_docuemnt(query: str) -> str:
+def search_document(query: str) -> str:
 
     pc = init_pinecone()
     index = get_index(pc, INDEX_NAME)
@@ -191,7 +215,9 @@ TOOLS = [
 
 def call_mistral(prompt: str):
 
-    bedrock = init_bedrock()
+    BedrockManager.init()
+    
+    #bedrock = init_bedrock()
 
     messages = [
         {
@@ -294,7 +320,7 @@ def call_mistral(prompt: str):
         for tc in tool_calls:
             if tc["function"]["name"] == "search_document":
                 args = json.loads(tc["function"]["arguments"])
-                search_result = search_docuemnt(args["query"])
+                search_result = PineconeMager.search_document(args["query"])
                 logger.info(
                     f"Search result for query '{args['query']}':\n{search_result}"
                 )

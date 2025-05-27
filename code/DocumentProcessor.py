@@ -1,18 +1,18 @@
 import RAGConfig
-from RAGConfig import RAGSystemError
 import os 
 import logging
 from langchain.schema import Document
 from typing import List
-from dotenv import load_dotenv, find_dotenv
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from pinecone import Pinecone, ServerlessSpec
+import RAGConfig, RAGSystemException
+
+
+# Initialize logging    
 
 logging.basicConfig(
+    
     level=logging.INFO,
-    #format='%(name)s - %(message)s'
     format='%(name)s - %(levelname)s - %(message)s'
 
 )
@@ -28,32 +28,39 @@ class DocumentProcessor:
         )
     
     def load_document(self, path: str) -> List[Document]:
-        """Load document from path with error handling"""
+    
         try:
             abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", path))
             
             if not os.path.exists(abs_path):
                 raise FileNotFoundError(f"Document not found: {abs_path}")
             
+            # Using a particular loader (PyMuPDFLoader from langchain_community)
+            
+            logger.debug(f"Loading document from {abs_path}")
+            
             loader = PyMuPDFLoader(abs_path)
             docs = loader.load()
             
             if not docs:
-                raise RAGSystemError(f"No content loaded from {path}")
+                raise RAGSystemException(f"No content loaded from {path}")
             
             logger.info(f"Successfully loaded {len(docs)} pages from {path}")
             return docs
             
         except Exception as e:
             logger.error(f"Error loading document {path}: {str(e)}")
-            raise RAGSystemError(f"Failed to load document: {str(e)}")
+            raise RAGSystemException(f"Failed to load document: {str(e)}")
     
     def split_documents(self, docs: List[Document]) -> List[Document]:
-        """Split documents into chunks with metadata preservation"""
+        
+        if not docs:
+            raise RAGSystemException("No documents provided for splitting")
+        
         try:
             chunks = self.text_splitter.split_documents(docs)
             
-            # Enhance metadata
+            # Improve metadata
             for i, chunk in enumerate(chunks):
                 chunk.metadata.update({
                     'chunk_id': i,
@@ -61,9 +68,9 @@ class DocumentProcessor:
                     'text': chunk.page_content  # For Pinecone metadata
                 })
             
-            logger.info(f"Split documents into {len(chunks)} chunks")
+            logger.debug(f"Split documents into {len(chunks)} chunks")
             return chunks
             
         except Exception as e:
             logger.error(f"Error splitting documents: {str(e)}")
-            raise RAGSystemError(f"Failed to split documents: {str(e)}")
+            raise RAGSystemException(f"Failed to split documents: {str(e)}")

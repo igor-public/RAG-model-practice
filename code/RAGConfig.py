@@ -31,7 +31,7 @@ class RAGConfig:
     )
 
 
-class RAGSystemError(Exception):
+class RAGSystemException(Exception):
     """Custom exception for RAG system errors"""
 
     pass
