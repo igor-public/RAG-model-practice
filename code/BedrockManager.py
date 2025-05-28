@@ -1,12 +1,14 @@
 import boto3
 import logging
 from functools import wraps
+from typing import List, Dict, Any
+from code.PineconeManager import PineconeManager
+import json
 from code.RAGConfig import RAGConfig, RAGSystemException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 logging.basicConfig(
     level=logging.INFO,
-    # format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     format="%(name)s: %(message)s",
 )
 
@@ -14,14 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockManager:
+    
+    @staticmethod
     def safe(fn):
         @wraps(fn)
         def _wrapper(*args, **kwargs):
             try:
                 return fn(*args, **kwargs)
             except RAGSystemException:
-                raise  # already wrapped
-            except Exception as exc:  # noqa: BLE001   (ruff)
+                raise  
+            except Exception as exc:  
                 logger.error("%s failed: %s", fn.__name__, exc, exc_info=True)
                 raise RAGSystemException(str(exc)) from exc
 
@@ -30,7 +34,7 @@ class BedrockManager:
     def __init__(self, config: RAGConfig):
         self.config = config
         self.session = boto3.Session()
-        self.session.client(RAGConfig.model_runtime, region_name=RAGConfig.model_aws_region)
+        self.bedrock = self.session.client(RAGConfig.model_runtime, region_name=RAGConfig.model_aws_region)
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
         )
@@ -38,40 +42,36 @@ class BedrockManager:
     
     
     @safe
-    def getModelResponse_stream( bedrock, TOOLS: list, MODEL_ID, messages, MAX_TOKENS, MODEL_TEMPERATURE):
+    def get_model_response_stream(self, *, tools: List[Dict[str, Any]], model_id, messages: List[Dict[str, Any]], max_tokens: int, model_temperature: float):
     
+        bedrock = self.bedrock
      
-        if not bedrock:
-            raise ValueError("Bedrock client is not initialized.")
-
-        if not MODEL_ID:
-            raise ValueError("Model ID is required.")
+        if not model_id:
+            raise ValueError("Model ID missing")
 
         if not messages:
-            raise ValueError("Messages are required for model invocation.")
+            raise ValueError("Messages missing")
 
-        if MAX_TOKENS <= 0:
-            raise ValueError("MAX_TOKENS must be a positive integer.")
+        if max_tokens <= 0:
+            raise ValueError("MAX_TOKENS below zero? really?")
 
-        if not TOOLS:
-            raise ValueError("TOOLS must be provided for the model invocation.")
+        if not tools:
+            raise ValueError("tools missing")
 
-        if MODEL_TEMPERATURE < 0 or MODEL_TEMPERATURE > 1:
-            raise ValueError("MODEL_TEMPERATURE must be between 0 and 1.")
+        if model_temperature < 0 or model_temperature > 1:
+            raise ValueError("MODEL_TEMPERATURE: 0 to 1 expected, got: {model_temperature}")
 
-        logger.info(f"Invoking model {MODEL_ID} with response streaming...")
+        logger.debug(f"Invoking model {model_id} with response streaming...")
         
-        # Invoke the model with response streaming
-            
         response = bedrock.invoke_model_with_response_stream(
-            modelId=MODEL_ID,
+            modelId=model_id,
             body=json.dumps(
                 {
                     "messages": messages,
-                    "max_tokens": MAX_TOKENS,
+                    "max_tokens": max_tokens,
                     "tool_choice": "auto",
-                    "tools": TOOLS,
-                    "temperature": MODEL_TEMPERATURE,
+                    "tools": tools,
+                    "temperature": model_temperature,
                     "stream": True,
                     "top_p": 1,
                 }
@@ -83,7 +83,7 @@ class BedrockManager:
         full_response = ""
         tool_calls = []
 
-        logger.debug(f"\n {MODEL_ID} called now ...")
+        logger.debug(f"\n {model_id} called now ...")
 
         stream = response.get("body")
 
@@ -119,8 +119,11 @@ class BedrockManager:
 
         if not tool_calls:
             logger.debug("No calls for tools where seen")
+            print()
+            return full_response
             return
 
+        # ---- run search_document tool -----------------------------------
         if tc and all(item in tool_calls for item in tc):
 
             logger.debug("\n Tools initiated, processing...\n")
@@ -146,13 +149,15 @@ class BedrockManager:
 
             logger.debug("\n\nProcessing search results...\n")
 
+            # ---- second pass --------------------------------------------------
+            
             final_response = bedrock.invoke_model_with_response_stream(
-                modelId=MODEL_ID,
+                modelId=model_id,
                 body=json.dumps(
                     {
                         "messages": messages,
-                        "max_tokens": MAX_TOKENS,
-                        "temperature": MODEL_TEMPERATURE,
+                        "max_tokens": max_tokens,
+                        "temperature": model_temperature,
                         "stream": True,
                     }
                 ),
@@ -176,7 +181,9 @@ class BedrockManager:
 
                 if token:
                     print(token, end="", flush=True)
+                    full_response += token
                 if choice.get("finish_reason") == "stop":
                     break
             print()
+            return full_response
      

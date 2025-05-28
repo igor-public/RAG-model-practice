@@ -1,10 +1,10 @@
 import time
 import logging
-import RAGConfig
+
 
 from typing import List, Dict, Any
 from langchain.schema import Document
-from RAGConfig import RAGSystemException
+from code.RAGConfig import RAGSystemException, RAGConfig
 from pinecone import Pinecone, ServerlessSpec
 
 logging.basicConfig(
@@ -118,8 +118,8 @@ class PineconeManager:
             logger.error(f"Error upserting vectors: {str(e)}")
             raise RAGSystemException(f"Failed to upsert vectors: {str(e)}")
     
-    def search(self, query_vector: List[float]) -> Dict[str, Any]:
-        """Search for similar vectors"""
+    def search(self, *, query_vector: List[float]) -> Dict[str, Any]:
+        
         try:
             if not self._index:
                 self._index = self.client.Index(self.config.index_name)
