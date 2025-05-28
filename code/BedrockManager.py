@@ -1,10 +1,7 @@
 import boto3
 import logging
-from langchain_core.utils import safe
-from RAGConfig import MODEL_REGION, MODEL_RUNTIME   
-import json
-import PineconeManager
-from RAGConfig import RAGConfig
+from functools import wraps
+from code.RAGConfig import RAGConfig, RAGSystemException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 logging.basicConfig(
@@ -17,31 +14,33 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockManager:
+    def safe(fn):
+        @wraps(fn)
+        def _wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except RAGSystemException:
+                raise  # already wrapped
+            except Exception as exc:  # noqa: BLE001   (ruff)
+                logger.error("%s failed: %s", fn.__name__, exc, exc_info=True)
+                raise RAGSystemException(str(exc)) from exc
+
+        return _wrapper
 
     def __init__(self, config: RAGConfig):
         self.config = config
-        self.session = boto3.Session
-        self.session.client(MODEL_RUNTIME, region_name=MODEL_REGION)
+        self.session = boto3.Session()
+        self.session.client(RAGConfig.model_runtime, region_name=RAGConfig.model_aws_region)
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=config.chunk_size,
-            chunk_overlap=config.chunk_overlap
+            chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
         )
+
+    
     
     @safe
     def getModelResponse_stream( bedrock, TOOLS: list, MODEL_ID, messages, MAX_TOKENS, MODEL_TEMPERATURE):
     
-        """
-        Invoke a model with response streaming.
-        
-        :param bedrock: The Bedrock client.
-        :param MODEL_ID: The ID of the model to invoke.
-        :param messages: The messages to send to the model.
-        :param MAX_TOKENS: The maximum number of tokens to generate.
-        :param TOOLS: The tools available for the model.
-        :param MODEL_TEMPERATURE: The temperature setting for the model.
-        :return: A response stream from the model invocation.
-        """
-        
+     
         if not bedrock:
             raise ValueError("Bedrock client is not initialized.")
 
@@ -180,3 +179,4 @@ class BedrockManager:
                 if choice.get("finish_reason") == "stop":
                     break
             print()
+     
