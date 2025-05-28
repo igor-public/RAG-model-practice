@@ -46,6 +46,8 @@ class BedrockManager:
     
         bedrock = self.bedrock
      
+        pc = PineconeManager(self.config)
+     
         if not model_id:
             raise ValueError("Model ID missing")
 
@@ -131,7 +133,7 @@ class BedrockManager:
             for tc in tool_calls:
                 if tc["function"]["name"] == "search_document":
                     args = json.loads(tc["function"]["arguments"])
-                    search_result = PineconeManager.search(args["query"])
+                    search_result = pc.search(args["query"])
                     logger.debug(
                         f"Search result for query '{args['query']}':\n{search_result}"
                     )

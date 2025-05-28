@@ -1,11 +1,13 @@
 import time
 import logging
+import os
 
 
 from typing import List, Dict, Any
 from langchain.schema import Document
 from code.RAGConfig import RAGSystemException, RAGConfig
 from pinecone import Pinecone, ServerlessSpec
+from dotenv import find_dotenv, load_dotenv
 
 logging.basicConfig(
     level=logging.INFO,
@@ -15,10 +17,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+
 class PineconeManager:
     
-    def __init__(self, config: RAGConfig, api_key: str):
+    def __init__(self, config: RAGConfig):
         self.config = config
+        
+        load_dotenv(find_dotenv("local.env"))
+        api_key = os.getenv("PINECONE_KEY") or ""
+        if not api_key:
+            raise RAGSystemException("PINECONE_KEY not found in environment")
+        
         self.api_key = api_key
         self._client = None
         self._index = None
@@ -118,7 +128,7 @@ class PineconeManager:
             logger.error(f"Error upserting vectors: {str(e)}")
             raise RAGSystemException(f"Failed to upsert vectors: {str(e)}")
     
-    def search(self, *, query_vector: List[float]) -> Dict[str, Any]:
+    def search(self, query_vector: List[float]) -> Dict[str, Any]:
         
         try:
             if not self._index:
