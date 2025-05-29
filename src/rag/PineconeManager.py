@@ -5,7 +5,7 @@ import os
 
 from typing import List, Any
 from langchain.schema import Document
-from code.RAGConfig import RAGSystemException, RAGConfig
+from rag.RAGConfig import RAGSystemException, RAGConfig
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import find_dotenv, load_dotenv

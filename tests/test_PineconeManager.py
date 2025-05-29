@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 import pytest
 import logging
 
-from code.RAGConfig import RAGConfig
-from code.PineconeManager import PineconeManager
+from src.rag.RAGConfig import RAGConfig
+from src.rag.PineconeManager import PineconeManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,7 +32,7 @@ def pc(monkeypatch):
     mock_client.Index.return_value = fake_index()
 
     mock_pc_cls = MagicMock(return_value=mock_client)
-    monkeypatch.setattr("code.PineconeManager.Pinecone", mock_pc_cls)
+    monkeypatch.setattr("rag.PineconeManager.Pinecone", mock_pc_cls)
     return mock_client   # handed to the test for assertions
 
 

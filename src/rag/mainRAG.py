@@ -1,10 +1,14 @@
 import logging
 import os
-from code.PineconeManager import PineconeManager
-from code.BedrockManager import BedrockManager
+import yaml
+from rag.PineconeManager import PineconeManager
+from rag.BedrockManager import BedrockManager
 from dotenv import find_dotenv, load_dotenv
-from code.RAGConfig import RAGConfig
+from rag.RAGConfig import RAGConfig
+ 
 
+with open("config/default.yaml", "r") as f:
+    cfg_dict = yaml.safe_load(f)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -75,5 +79,5 @@ if __name__ == "__main__":
 
     pc = PineconeManager(RAGConfig)
     mgr = BedrockManager(RAGConfig)
-    
+
     mgr.get_model_response_stream(TOOLS, messages)

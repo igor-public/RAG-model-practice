@@ -1,0 +1,22 @@
+aws_bedrock:
+  model_id: "mistral.mistral-large-2407-v1:0"
+  model_temperature: 0.2
+  max_tokens: 2048
+  aws_region: "us-west-2"
+  runtime: "bedrock-runtime"
+
+pinecone:
+  index_name: "ia-index"
+  embedding_dim: 384
+  metric: "cosine"
+  cloud: "aws"
+  region: "us-east-1"
+
+document_processing:
+  chunk_size: 1024
+  chunk_overlap: 128
+  top_k_results: 3
+  similarity_threshold: 0.5
+
+embedding_model:
+  name: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"

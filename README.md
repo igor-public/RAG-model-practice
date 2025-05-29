@@ -67,7 +67,7 @@ PINECONE_KEY="XXXXXYYYYYZZZZZ"
 
 ```
 .
-├── code/
+├── src/rag/
 │   ├── RAGConfig.py
 │   ├── PineconeManager.py
 │   ├── BedrockManager.py
@@ -86,7 +86,7 @@ PINECONE_KEY="XXXXXYYYYYZZZZZ"
 Once your environment is set up and `local.env` is configured:
 
 ```bash
-python -m code.mainRAG
+python -m rag.mainRAG
 ```
 
 This will:

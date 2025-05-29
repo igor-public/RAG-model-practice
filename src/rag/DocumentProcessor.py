@@ -4,7 +4,7 @@ from langchain.schema import Document
 from typing import List
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from code.RAGConfig import RAGConfig, RAGSystemException
+from rag.RAGConfig import RAGConfig, RAGSystemException
 
 
 # Initialize logging    

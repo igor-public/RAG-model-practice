@@ -1,7 +1,5 @@
-# tests/test_bedrock_manager.py
-
-from code.BedrockManager import BedrockManager
-from code.RAGConfig import RAGConfig
+from src.rag.BedrockManager import BedrockManager 
+from src.rag.RAGConfig import RAGConfig
 
 
 def testInitializeBedrockManager():

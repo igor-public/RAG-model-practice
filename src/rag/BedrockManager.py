@@ -2,9 +2,9 @@ import boto3
 import logging
 from functools import wraps
 from typing import List, Dict, Any
-from code.PineconeManager import PineconeManager
+from rag.PineconeManager import PineconeManager
 import json
-from code.RAGConfig import RAGConfig, RAGSystemException
+from rag.RAGConfig import RAGConfig, RAGSystemException
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 logging.basicConfig(
