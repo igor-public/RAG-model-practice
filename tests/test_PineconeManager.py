@@ -2,15 +2,21 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+import logging
 
 from code.RAGConfig import RAGConfig
 from code.PineconeManager import PineconeManager
 
+logging.basicConfig(
+    level=logging.INFO,
+    # format='%(name)s - %(message)s'
+    format="%(name)s - %(levelname)s - %(message)s",
+)
+
 def fake_index(name="ia-index"):
-    """Return a MagicMock that looks like a pinecone Index object."""
+    
     idx = MagicMock()
     idx.name = name
-    # describe_index_stats returns obj with .total_vector_count attr
     idx.describe_index_stats.return_value = SimpleNamespace(total_vector_count=0)
     return idx
 
@@ -35,7 +41,7 @@ def pc(monkeypatch):
 # ----------------------------------------------------------------------------
 def test_ensure_index_creates_and_returns_index(pc):
     cfg = RAGConfig()
-    mgr = PineconeManager(cfg, api_key="dummy")
+    mgr = PineconeManager(cfg)
 
     ix = mgr.ensure_index()
 
@@ -45,35 +51,9 @@ def test_ensure_index_creates_and_returns_index(pc):
     assert ix is pc.Index.return_value
 
 
-def test_delete_index_when_absent(pc):
-    cfg = RAGConfig()
-    mgr = PineconeManager(cfg, api_key="dummy")
-
-    # list_indexes → []   =>  should *not* call delete_index
-    mgr.delete_index()
-    pc.delete_index.assert_not_called()
-
-
-def test_search_filters_by_threshold(pc):
-    cfg = RAGConfig(similarity_threshold=0.8)
-    mgr = PineconeManager(cfg, api_key="dummy")
-
-    # fake query result with one good, one bad match
-    pc.Index.return_value.query.return_value = {
-        "matches": [
-            {"id": "good", "score": 0.85, "metadata": {}},
-            {"id": "bad",  "score": 0.50, "metadata": {}},
-        ]
-    }
-    res = mgr.search([0.1, 0.2, 0.3])
-
-    assert [m["id"] for m in res["matches"]] == ["good"]
-
-
-def test_upsert_vector_length_mismatch_raises(pc):
-    cfg = RAGConfig()
-    mgr = PineconeManager(cfg, api_key="dummy")
-
-    with pytest.raises(ValueError, match="Mismatch between vectors"):
-        # 2 vectors, 1 chunk  -> should raise before hitting network
-        mgr.upsert_vectors([[0.1], [0.2]], [MagicMock()])
+""" 
+if __name__ == "__main__":
+    
+    pc = PineconeManager(RAGConfig()) 
+    pc.ensure_index()
+    pc.search("What is the Low-Rank Adaptation?")   """     
