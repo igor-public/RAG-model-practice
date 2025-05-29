@@ -58,10 +58,7 @@ def testGetModelResponse_stream():
     # -- when
     response = mgr.get_model_response_stream(
         tools=TOOLS,
-        model_id=cfg.model_id,
-        messages=_messages,
-        max_tokens=cfg.max_tokens,
-        model_temperature=cfg.model_temperature,
+        messages=_messages
     )
 
     # -- then

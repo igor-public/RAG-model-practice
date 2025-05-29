@@ -1,11 +1,10 @@
-import RAGConfig
 import os 
 import logging
 from langchain.schema import Document
 from typing import List
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import RAGConfig
+from code.RAGConfig import RAGConfig, RAGSystemException
 
 
 # Initialize logging    
@@ -16,6 +15,7 @@ logging.basicConfig(
     format='%(name)s - %(levelname)s - %(message)s'
 
 )
+
 logger = logging.getLogger(__name__)
 
 class DocumentProcessor:

@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class BedrockManager:
-    
     @staticmethod
     def safe(fn):
         @wraps(fn)
@@ -24,8 +23,8 @@ class BedrockManager:
             try:
                 return fn(*args, **kwargs)
             except RAGSystemException:
-                raise  
-            except Exception as exc:  
+                raise
+            except Exception as exc:
                 logger.error("%s failed: %s", fn.__name__, exc, exc_info=True)
                 raise RAGSystemException(str(exc)) from exc
 
@@ -34,46 +33,38 @@ class BedrockManager:
     def __init__(self, config: RAGConfig):
         self.config = config
         self.session = boto3.Session()
-        self.bedrock = self.session.client(RAGConfig.model_runtime, region_name=RAGConfig.model_aws_region)
+        self.bedrock = self.session.client(
+            RAGConfig.model_runtime, region_name=RAGConfig.model_aws_region
+        )
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
         )
 
-    
-    
     @safe
-    def get_model_response_stream(self, *, tools: List[Dict[str, Any]], model_id, messages: List[Dict[str, Any]], max_tokens: int, model_temperature: float):
-    
-        bedrock = self.bedrock
-     
+    def get_model_response_stream(
+        self,
+        tools: List[Dict[str, Any]],
+        messages: List[Dict[str, Any]],
+    ):
         pc = PineconeManager(self.config)
-     
-        if not model_id:
-            raise ValueError("Model ID missing")
 
         if not messages:
             raise ValueError("Messages missing")
 
-        if max_tokens <= 0:
-            raise ValueError("MAX_TOKENS below zero? really?")
-
         if not tools:
             raise ValueError("tools missing")
 
-        if model_temperature < 0 or model_temperature > 1:
-            raise ValueError("MODEL_TEMPERATURE: 0 to 1 expected, got: {model_temperature}")
+        logger.debug(f"Invoking model {self.config.model_id} with response streaming...")
 
-        logger.debug(f"Invoking model {model_id} with response streaming...")
-        
-        response = bedrock.invoke_model_with_response_stream(
-            modelId=model_id,
+        response = self.bedrock.invoke_model_with_response_stream(
+            modelId=self.config.model_id,
             body=json.dumps(
                 {
                     "messages": messages,
-                    "max_tokens": max_tokens,
+                    "max_tokens": self.config.max_tokens,
                     "tool_choice": "auto",
                     "tools": tools,
-                    "temperature": model_temperature,
+                    "temperature": self.config.model_temperature,
                     "stream": True,
                     "top_p": 1,
                 }
@@ -85,7 +76,7 @@ class BedrockManager:
         full_response = ""
         tool_calls = []
 
-        logger.debug(f"\n {model_id} called now ...")
+        logger.debug(f"\n {self.config.model_id} called now ...")
 
         stream = response.get("body")
 
@@ -127,7 +118,6 @@ class BedrockManager:
 
         # ---- run search_document tool -----------------------------------
         if tc and all(item in tool_calls for item in tc):
-
             logger.debug("\n Tools initiated, processing...\n")
 
             for tc in tool_calls:
@@ -152,14 +142,14 @@ class BedrockManager:
             logger.debug("\n\nProcessing search results...\n")
 
             # ---- second pass --------------------------------------------------
-            
-            final_response = bedrock.invoke_model_with_response_stream(
-                modelId=model_id,
+
+            final_response = self.bedrock.invoke_model_with_response_stream(
+                modelId=self.config.model_id,
                 body=json.dumps(
                     {
                         "messages": messages,
-                        "max_tokens": max_tokens,
-                        "temperature": model_temperature,
+                        "max_tokens": self.config.max_tokens,
+                        "temperature": self.config.model_temperature,
                         "stream": True,
                     }
                 ),
@@ -188,4 +178,3 @@ class BedrockManager:
                     break
             print()
             return full_response
-     

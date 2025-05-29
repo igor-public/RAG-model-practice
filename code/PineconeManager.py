@@ -11,7 +11,7 @@ from pinecone import Pinecone, ServerlessSpec
 from dotenv import find_dotenv, load_dotenv
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     # format='%(name)s - %(message)s'
     format="%(name)s - %(levelname)s - %(message)s",
 )
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class PineconeManager:
     def __init__(self, config: RAGConfig):
+        
         self.config = config
 
         load_dotenv(find_dotenv("local.env"))

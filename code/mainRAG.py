@@ -1,9 +1,9 @@
 import logging
 import os
-import BedrockManager
-import PineconeManager
+from code.PineconeManager import PineconeManager
+from code.BedrockManager import BedrockManager
 from dotenv import find_dotenv, load_dotenv
-from RAGConfig import RAGConfig
+from code.RAGConfig import RAGConfig
 
 
 logging.basicConfig(
@@ -24,8 +24,7 @@ logger.debug(PINECONE_KEY)
 
 # --- Config ---
 MODEL_ID = RAGConfig.model_id
-MODEL_TEMPERATURE = RAGConfig.model_temperature
-MAX_TOKENS = RAGConfig.max_tokens
+
 MODEL_REGION = RAGConfig.model_aws_region
 MODEL_RUNTIME = RAGConfig.model_runtime
 
@@ -61,9 +60,20 @@ if __name__ == "__main__":
         }
     ]
 
-    pc = PineconeManager(api_key=PINECONE_KEY)
-    prompt = f"Q: {SEARCH_QUESTION}\n\nAnswer:"
+    prompt = f"Q: {SEARCH_QUESTION}\n\n"
 
-    BedrockManager.getModelResponse_stream(
-        prompt, TOOLS, MODEL_ID, MAX_TOKENS, MODEL_TEMPERATURE, pc.client
-    )
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You can call the function `search_document` when information "
+                "is likely stored in the vector database."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
+
+    pc = PineconeManager(RAGConfig)
+    mgr = BedrockManager(RAGConfig)
+    
+    mgr.get_model_response_stream(TOOLS, messages)
