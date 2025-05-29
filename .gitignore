@@ -1,5 +1,6 @@
 local.env
 .env
 # Byte-compiled files
-__pycache__/
+/code/__pycache__/
+/test/__pycache__/
 *.py[cod]

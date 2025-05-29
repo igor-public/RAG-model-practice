@@ -13,6 +13,7 @@ class RAGConfig:
     model_runtime: str = "bedrock-runtime"
 
     # Pinecone related
+    
     index_name: str = "ia-index"
     embedding_dim: int = 384
     metric: str = "cosine"
@@ -20,10 +21,11 @@ class RAGConfig:
     pinecone_region: str = "us-east-1"
 
     # Document Processing 
+    
     chunk_size: int = 1024
     chunk_overlap: int = 128
     top_k_results: int = 3
-    similarity_threshold: float = 0.7
+    similarity_threshold: float = 0.5
 
     # Embedding Model 
     embedding_model_name: str = (
@@ -31,7 +33,7 @@ class RAGConfig:
     )
 
 
-class RAGSystemError(Exception):
+class RAGSystemException(Exception):
     """Custom exception for RAG system errors"""
 
     pass
