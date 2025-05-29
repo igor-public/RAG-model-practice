@@ -54,7 +54,9 @@ class BedrockManager:
         if not tools:
             raise ValueError("tools missing")
 
-        logger.debug(f"Invoking model {self.config.model_id} with response streaming...")
+        logger.debug(
+            f"Invoking model {self.config.model_id} with response streaming..."
+        )
 
         response = self.bedrock.invoke_model_with_response_stream(
             modelId=self.config.model_id,
@@ -111,14 +113,14 @@ class BedrockManager:
                 break
 
         if not tool_calls:
-            logger.debug("No calls for tools where seen")
+            logger.info("No calls for tools where seen")
             print()
             return full_response
             return
 
         # ---- run search_document tool -----------------------------------
         if tc and all(item in tool_calls for item in tc):
-            logger.debug("\n Tools initiated, processing...\n")
+            logger.info("\n Tools initiated, processing...\n")
 
             for tc in tool_calls:
                 if tc["function"]["name"] == "search_document":
@@ -139,7 +141,7 @@ class BedrockManager:
                         ]
                     )
 
-            logger.debug("\n\nProcessing search results...\n")
+            logger.debug("\n\n Processing search results...\n")
 
             # ---- second pass --------------------------------------------------
 
