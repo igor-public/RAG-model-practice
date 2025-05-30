@@ -1,7 +1,6 @@
 import boto3
 import logging
 from functools import wraps
-from typing import List, Dict, Any
 from rag.PineconeManager import PineconeManager
 import json
 from rag.RAGConfig import RAGConfig, RAGSystemException
@@ -13,6 +12,20 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+#system = [{"text": [{"text": "system"}]}]
+
+system_prompt = "You can call the function `search_document` when needed."
+
+system = [
+    {"text": system_prompt},]
+
+inferenceConfig = {
+        "maxTokens": RAGConfig.max_tokens,
+        "temperature": RAGConfig.model_temperature,
+        "topP": 1.0,
+    }
+
 
 
 class BedrockManager:
@@ -41,38 +54,25 @@ class BedrockManager:
         )
 
     @safe
-    def get_model_response_stream(
-        self,
-        tools: List[Dict[str, Any]],
-        messages: List[Dict[str, Any]],
-    ):
+    def get_model_response_stream(self, toolConfig, messages):
         pc = PineconeManager(self.config)
 
         if not messages:
             raise ValueError("Messages missing")
 
-        if not tools:
-            raise ValueError("tools missing")
+        if not toolConfig:
+            raise ValueError("tools configuration is missing")
 
         logger.debug(
             f"Invoking model {self.config.model_id} with response streaming..."
         )
 
-        response = self.bedrock.invoke_model_with_response_stream(
+        response = self.bedrock.converse_stream(
             modelId=self.config.model_id,
-            body=json.dumps(
-                {
-                    "messages": messages,
-                    "max_tokens": self.config.max_tokens,
-                    "tool_choice": "auto",
-                    "tools": tools,
-                    "temperature": self.config.model_temperature,
-                    "stream": True,
-                    "top_p": 1,
-                }
-            ),
-            contentType="application/json",
-            accept="application/json",
+            system=system,
+            messages=messages,
+            inferenceConfig=inferenceConfig,
+            toolConfig=toolConfig,
         )
 
         full_response = ""
@@ -145,18 +145,12 @@ class BedrockManager:
 
             # ---- second pass --------------------------------------------------
 
-            final_response = self.bedrock.invoke_model_with_response_stream(
+            final_response = self.bedrock.converse_stream(
                 modelId=self.config.model_id,
-                body=json.dumps(
-                    {
-                        "messages": messages,
-                        "max_tokens": self.config.max_tokens,
-                        "temperature": self.config.model_temperature,
-                        "stream": True,
-                    }
-                ),
-                contentType="application/json",
-                accept="application/json",
+                system=system,
+                messages=messages,
+                inferenceConfig=inferenceConfig,
+                toolConfig=toolConfig,
             )
 
             for event in final_response["body"]:
