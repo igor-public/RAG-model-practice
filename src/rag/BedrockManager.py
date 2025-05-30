@@ -29,25 +29,6 @@ inferenceConfig = {
     "topP": 1.0,
 }
 
-tool_config_no_tool = {
-    "tools": [
-        {
-            "toolSpec": {
-                "name": "search_document",
-                "description": "Search through the uploaded document for relevant passages",
-                "inputSchema": {
-                    "json": {
-                        "type": "object",
-                        "properties": {"query": {"type": "string"}},
-                        "required": ["query"],
-                    }
-                },
-            }
-        }
-    ],
-    "toolChoice": {"auto": {}},
-}
-
 
 class BedrockManager:
     @staticmethod
@@ -100,7 +81,7 @@ class BedrockManager:
         tool_calls = []
 
         logger.debug(f"\n First response: {json.dumps(response, indent=2)}")
-        
+
         """   sample 
         
          {
@@ -146,56 +127,56 @@ class BedrockManager:
 
         for block in response.get("output", {}).get("message", {}).get("content", []):
             tool_use = block.get("toolUse")
-            
-            if tool_use:
-                tool_calls.append({
-                "tool_use_id": tool_use["toolUseId"],
-                "name":        tool_use["name"],
-                "input":       tool_use["input"],
-            })
 
-        #tool_calls = response.get("output", {}).get("message", {}).get("content", [])
-        
+            if tool_use:
+                tool_calls.append(
+                    {
+                        "tool_use_id": tool_use["toolUseId"],
+                        "name": tool_use["name"],
+                        "input": tool_use["input"],
+                    }
+                )
+
         logger.debug(f"Tool calls: {tool_calls}")
-        
+
         for tc in tool_calls:
             if tc.get("name") == "search_document":
                 args = tc.get("input", {})
                 search_result = pc.search(args["query"])
                 logger.debug(
-                        f"Search result for query '{args['query']}':\n{search_result}"
-                    )
-                
-                messages.append({
-                    "role": "assistant", 
-                     "content": [ 
-                          {"text": search_result}
-                          ]
-                         })
-                messages.append({
-                    "role": "user", 
-                    "content": 
-                    [
-                        {"text": "please summarise the search results in three bullet points"}
-                        ]
-                    })
+                    f"Search result for query '{args['query']}':\n{search_result}"
+                )
 
-     
+                messages.append(
+                    {"role": "assistant", "content": [{"text": search_result}]}
+                )
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "text": "please summarise the search results in three bullet points"
+                            }
+                        ],
+                    }
+                )
+
         logger.info("\n\n Processing search results...\n")
-            
-            
-            
+
         # ---- second pass --------------------------------------------------
 
-        logger.info(f"\n\n {self.config.model_id} called again with streaming and no tools ...")
-        logger.debug(f"messages: {messages}")   
+        logger.info(
+            f"\n\n {self.config.model_id} called again with streaming and no tools ..."
+        )
+        
+        logger.debug(f"messages: {messages}")
 
         final_response = self.bedrock.converse_stream(
-                modelId=self.config.model_id,
-                system=system,
-                messages=messages,
-                inferenceConfig=inferenceConfig         
-            )
+            modelId=self.config.model_id,
+            system=system,
+            messages=messages,
+            inferenceConfig=inferenceConfig,
+        )
 
         full_response = ""
         for chunk in final_response["stream"]:
