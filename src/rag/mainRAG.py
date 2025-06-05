@@ -9,12 +9,12 @@ from rag.RAGConfig import RAGConfig
     cfg_dict = yaml.safe_load(f) """
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 # Environment variables. Requires PINECONE_KEY (free tier)
@@ -25,9 +25,9 @@ PINECONE_KEY = os.getenv("PINECONE_KEY")
 logger.debug(PINECONE_KEY)
 
 
-model_prompt = "Explain the theory of relativity in simple terms."
-SEARCH_QUESTION = "What is the key advantages of LoRA?"
-query_prompt = "what is the adapter Layers and Inference Latency"
+# model_prompt = "Explain the theory of relativity in simple terms."
+SEARCH_QUESTION = "What is the weather in Munich today?"
+# query_prompt = "what is the adapter Layers and Inference Latency"
 
 
 if __name__ == "__main__":
@@ -36,7 +36,7 @@ if __name__ == "__main__":
             {
                 "toolSpec": {
                     "name": "search_document",
-                    "description": "Search through the uploaded document for relevant passages",
+                    "description": "Search documents about LoRA and machine‐learning technical details.",
                     "inputSchema": {
                         "json": {
                             "type": "object",
@@ -47,6 +47,7 @@ if __name__ == "__main__":
                 }
             }
         ],
+        # Force the model to only call a tool when explicitly prompted by the system‐prompt logic above
         "toolChoice": {"auto": {}},
     }
 
