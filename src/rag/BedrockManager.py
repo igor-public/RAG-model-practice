@@ -13,11 +13,24 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 # system = [{"text": [{"text": "system"}]}]
 
-system_prompt = "You can call the function `search_document` when needed."
+system_prompt = """
+You have access to exactly one tool:
+
+  • search_document  
+    Description: “Search documents about LoRA and other machine‐learning technical details.”
+
+When you see a user question:
+  1. First decide if the question is explicitly about LoRA or machine‐learning technical details (as described above).
+  2. If—and only if—the question pertains to LoRA/ML‐technical content, call search_document with an appropriate “query” and use its result to craft your answer.
+  3. If the question is unrelated (e.g. “What is the weather in Munich today?”), do **not** call any tool. Simply answer directly.
+
+Use this rule every time. Do not call the tool for any other topic.
+""".strip()
+
 
 system = [
     {"text": system_prompt},
@@ -160,8 +173,10 @@ class BedrockManager:
                         ],
                     }
                 )
+                
+                logger.info("\n\n Processing search results...\n")
 
-        logger.info("\n\n Processing search results...\n")
+       
 
         # ---- second pass --------------------------------------------------
 
