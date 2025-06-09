@@ -1,0 +1,39 @@
+{
+  "ResponseMetadata": {
+    "RequestId": "6d7c65da-dfb2-4a00-92c3-563866c4e836",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "date": "Fri, 30 May 2025 15:01:44 GMT",
+      "content-type": "application/json",
+      "content-length": "298",
+      "connection": "keep-alive",
+      "x-amzn-requestid": "6d7c65da-dfb2-4a00-92c3-563866c4e836"
+    },
+    "RetryAttempts": 0
+  },
+  "output": {
+    "message": {
+      "role": "assistant",
+      "content": [
+        {
+          "toolUse": {
+            "toolUseId": "tooluse_b8oV3HLkTGaNl1TAk88vfQ",
+            "name": "search_document",
+            "input": {
+              "query": "key advantages of LoRA"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "stopReason": "tool_use",
+  "usage": {
+    "inputTokens": 94,
+    "outputTokens": 25,
+    "totalTokens": 119
+  },
+  "metrics": {
+    "latencyMs": 1002
+  }
+}

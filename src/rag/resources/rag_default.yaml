@@ -2,15 +2,15 @@ aws_bedrock:
   model_id: "mistral.mistral-large-2407-v1:0"
   model_temperature: 0.2
   max_tokens: 2048
-  aws_region: "us-west-2"
-  runtime: "bedrock-runtime"
-
+  model_aws_region: "us-west-2"
+  model_runtime: "bedrock-runtime"
+  
 pinecone:
   index_name: "ia-index"
   embedding_dim: 384
   metric: "cosine"
   cloud: "aws"
-  region: "us-east-1"
+  pinecone_region: "us-east-1"
 
 document_processing:
   chunk_size: 1024
@@ -19,4 +19,4 @@ document_processing:
   similarity_threshold: 0.5
 
 embedding_model:
-  name: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  embedding_model_name: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"

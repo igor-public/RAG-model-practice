@@ -120,4 +120,3 @@ pytest -q -s
 - Point `mainRAG.py` at your own PDFs  
 - Tweak `RAGConfig` for different LLMs or indexing parameters  
 - Extend `TOOLS` to add custom retrieval or external APIs  
-

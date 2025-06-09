@@ -5,7 +5,7 @@ import os
 
 from typing import List, Any
 from langchain.schema import Document
-from rag.RAGConfig import RAGSystemException, RAGConfig
+from rag.config.RAGConfig import RAGSystemException, RAGConfig
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import find_dotenv, load_dotenv
@@ -29,7 +29,7 @@ class PineconeManager:
             raise RAGSystemException("PINECONE_KEY not found in environment")
 
         self.embedding_model = HuggingFaceEmbeddings(
-            model_name=RAGConfig.embedding_model_name,
+            model_name=config.embedding_model.embedding_model_name,
         )
         self.api_key = api_key
         self._client = None
@@ -52,21 +52,21 @@ class PineconeManager:
         try:
             existing_indexes = [idx.name for idx in self.client.list_indexes()]
 
-            if self.config.index_name not in existing_indexes:
-                logger.info(f"Creating index: {self.config.index_name}")
+            if self.config.pinecone.index_name not in existing_indexes:
+                logger.info(f"Creating index: {self.config.pinecone.index_name}")
                 self.client.create_index(
-                    name=self.config.index_name,
-                    dimension=self.config.embedding_dim,
-                    metric=self.config.metric,
+                    name=self.config.pinecone.index_name,
+                    dimension=self.config.pinecone.embedding_dim,
+                    metric=self.config.pinecone.metric,
                     spec=ServerlessSpec(
-                        cloud=self.config.cloud, region=self.config.pinecone_region
+                        cloud=self.config.pinecone.cloud, region=self.config.pinecone.pinecone_region
                     ),
                 )
                 # Wait for index to be ready
                 time.sleep(10)
 
-            self._index = self.client.Index(self.config.index_name)
-            logger.info(f"Index {self.config.index_name} ready")
+            self._index = self.client.Index(self.config.pinecone.index_name)
+            logger.info(f"Index {self.config.pinecone.index_name} ready")
             return self._index
 
         except Exception as e:
@@ -136,17 +136,17 @@ class PineconeManager:
     def search(self, query) -> str:
         try:
             if not self._index:
-                self._index = self.client.Index(self.config.index_name)
+                self._index = self.client.Index(self.config.pinecone.index_name)
 
             query_vector = self.embedding_model.embed_query(query)
 
             logger.info(f"Searching for: {query}")
             
-            logger.debug(f"Searching for vector: {query_vector} with top_k={self.config.top_k_results} and similarity_threshold={self.config.similarity_threshold}")
+            logger.debug(f"Searching for vector: {query_vector} with top_k={self.config.document_processing.top_k_results} and similarity_threshold={self.config.document_processing.similarity_threshold}")
             
             response = self._index.query(
                 vector=query_vector,
-                top_k=self.config.top_k_results,
+                top_k=self.config.document_processing.top_k_results,
                 include_metadata=True,
                 include_values=False,
             )
@@ -158,15 +158,15 @@ class PineconeManager:
             filtered_matches = [
                 match
                 for match in response.get("matches", [])
-                if match["score"] >= self.config.similarity_threshold
+                if match["score"] >= self.config.document_processing.similarity_threshold
             ]
             
             if not filtered_matches:
                 
                 logger.info("No relevant documents found after filtering")
-                logger.info(f"The threshold is: {self.config.similarity_threshold}")
+                logger.info(f"The threshold is: {self.config.document_processing.similarity_threshold}")
                 logger.info(f"The highest ranking finding is: {response['matches'][0]['score'] if response['matches'] else 'N/A'}")
-                logger.info(f"The top_k_results is: {self.config.top_k_results}")
+                logger.info(f"The top_k_results is: {self.config.document_processing.top_k_results}")
                 
                 return "No relevant documents found."
                         

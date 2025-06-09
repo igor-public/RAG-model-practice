@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_temperature: float
     max_tokens: int
     aws_region: str
-    runtime: str
+    model_runtime: str
 
     index_name: str
     embedding_dim: int
