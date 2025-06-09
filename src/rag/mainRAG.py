@@ -22,7 +22,7 @@ logger.debug(PINECONE_KEY)
 
 
 # model_prompt = "Explain the theory of relativity in simple terms."
-SEARCH_QUESTION = "What is the weather in Munich today?"
+SEARCH_QUESTION = "what is the adapter Layers and Inference Latency"
 # query_prompt = "what is the adapter Layers and Inference Latency"
 
 

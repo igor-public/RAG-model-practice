@@ -41,7 +41,7 @@ class PineconeManager:
         if self._client is None:
             try:
                 self._client = Pinecone(api_key=self.api_key)
-                logger.info("Initialized Pinecone client")
+                logger.debug("Initialized Pinecone client")
             except Exception as e:
                 logger.error(f"Error initializing Pinecone: {str(e)}")
                 raise RAGSystemException(f"Failed to initialize Pinecone: {str(e)}")
