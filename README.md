@@ -1,69 +1,57 @@
 # RAG Model Practice
 
-This project demonstrates a Retrieval-Augmented Generation (RAG) pipeline 
-The key features: 
+This project demonstrates a Retrieval-Augmented Generation (RAG) pipeline.
 
-- **AWS Bedrock** (via boto3) for LLM inference. One needs the AWS KEY stored locally. 
+Key features:
+
+- **AWS Bedrock** (via boto3) for LLM inference. Requires AWS credentials locally.
 - **Pinecone** for vector storage & search  
 - **LangChain Community** PDF loader & text splitter  
 - **Sentence-Transformers** for embeddings
-- **stream response** using stream as a response
+- **Streaming response** capability
+
+---
+
+## 🚀 Installation
+
+**From PyPI:**
+
+```bash
+pip install RAG-model-practice
+```
 
 ---
 
 ## Requirements
 
-1. **Python** ≥ 3.8  
-2. A working **virtual environment** (recommended):  
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate   # on Windows: .venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   > If you don’t have a `requirements.txt`, you’ll need at least:
-   > ```text
-   > boto3
-   > python-dotenv
-   > langchain-community
-   > pinecone-client
-   > sentence-transformers
-   > ```
+- **Python** ≥ 3.12
+- **AWS credentials** (`~/.aws/credentials`)
+- **Pinecone API key** (see below)
 
-4. Amazon key:
+---
+
+## ⚙️ Environment Setup
+
+1. **Environment Variables**
+
+   Create a `.env` or `local.env` file in the project root:
+
+   ```dotenv
+   PINECONE_KEY="XXXXXYYYYYZZZZZ"
+   ```
+
+   *Do **not** commit this file. Add `.env`/`local.env` to `.gitignore`.*
+
+2. **AWS credentials**
+
    ```bash
    user@machine:~/.aws
- 
-    -rw-r--r--  1 USERID USERID   43 May 26 13:13 config
-    -rw-r--r--  1 USERID USERID  116 May 26 13:13 credentials
+   # Ensure both config and credentials files exist and are valid
+   ```
 
 ---
 
-##  Pinecone Account
-
-You must have a **Pinecone** account and an active API key:
-
-1. Sign up / log in at https://app.pinecone.io  
-2. Create or select an **API key** in your project  
-3. Copy the key (it looks like `XXXXXYYYYYZZZZZ`)
-
----
-
-## ⚙ Environment Variables
-
-Create a file named `.env` or `local.env` in the project root with:
-
-```dotenv
-PINECONE_KEY="XXXXXYYYYYZZZZZ"
-```
-
-> **Tip:** Do **not** commit this file to version control. Add `.env`/`local.env` to your `.gitignore`.
-
----
-
-## 📁 Project Structure
+## 📦 Project Structure
 
 ```
 .
@@ -72,42 +60,47 @@ PINECONE_KEY="XXXXXYYYYYZZZZZ"
 │   ├── PineconeManager.py
 │   ├── BedrockManager.py
 │   ├── DocumentManager.py
-│   └── mainRAG.py         ← entry-point
-├── sample.pdf             ← example document
-├── local.env              ← your Pinecone key
-├── requirements.txt
-└── tests/                 ← pytest unit tests
+│   └── mainRAG.py       # Entry point
+├── sample.pdf
+├── local.env
+└── tests/
 ```
 
 ---
 
-## ▶ Running the Example
+## ▶ Usage
 
-Once your environment is set up and `local.env` is configured:
+After installation and configuration:
 
 ```bash
-python -m rag.mainRAG
+rag-run
+```
+
+Or, from source:
+
+```bash
+poetry run rag-run
 ```
 
 This will:
 
 1. Load `sample.pdf`  
-2. Split it into chunks & embed them  
-3. Upsert vectors into your Pinecone index  
+2. Chunk & embed its content  
+3. Upsert vectors into Pinecone  
 4. Prompt the RAG system with a sample query  
-5. Stream the response back to your console
+5. Stream the LLM response to your console
 
 ---
 
-## Running Tests
+## 🧪 Running Tests
 
-This project includes unit tests for each component. From the project root:
+Run unit tests with:
 
 ```bash
 pytest -q
 ```
 
-Use `-s` if you want to see print/log output:
+Or, to see print/log output:
 
 ```bash
 pytest -q -s
@@ -117,6 +110,21 @@ pytest -q -s
 
 ## Next Steps
 
-- Point `mainRAG.py` at your own PDFs  
-- Tweak `RAGConfig` for different LLMs or indexing parameters  
-- Extend `TOOLS` to add custom retrieval or external APIs  
+- Use your own PDFs in `mainRAG.py`
+- Edit `RAGConfig` for different LLMs, chunking, or vector store settings
+- Extend with custom tools or APIs as needed
+
+---
+
+## 📦 PyPI Package
+
+You can always find the latest release on [PyPI](https://pypi.org/project/RAG-model-practice/):
+
+[![PyPI version](https://img.shields.io/pypi/v/RAG-model-practice.svg?style=flat-square)](https://pypi.org/project/RAG-model-practice/)
+
+Install with:
+
+```bash
+pip install RAG-model-practice
+```
+
