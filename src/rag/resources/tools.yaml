@@ -1,0 +1,16 @@
+tools:
+  - toolSpec:
+      name: search_document
+      description: >-
+        Search documents about LoRA and machine‐learning technical details.
+      inputSchema:
+        json:
+          type: object
+          properties:
+            query:
+              type: string
+          required:
+            - query
+
+toolChoice:
+  auto: {}

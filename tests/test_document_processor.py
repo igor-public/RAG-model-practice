@@ -2,8 +2,8 @@ import os
 import pytest
 from types import SimpleNamespace
 from langchain.schema import Document
-import rag.DocumentProcessor as dm   
-from rag.RAGConfig import RAGConfig, RAGSystemException
+import src.rag.DocumentProcessor as dm   
+from src.rag.RAGConfig import RAGConfig, RAGSystemException
 
 
 @pytest.fixture

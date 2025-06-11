@@ -4,7 +4,7 @@ from langchain.schema import Document
 from typing import List
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from rag.RAGConfig import RAGConfig, RAGSystemException
+from rag.config.RAGConfig import RAGConfig, RAGSystemException
 
 
 # Initialize logging    
@@ -23,8 +23,8 @@ class DocumentProcessor:
     def __init__(self, config: RAGConfig):
         self.config = config
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=config.chunk_size,
-            chunk_overlap=config.chunk_overlap
+            chunk_size=config.document_processing.chunk_size,
+            chunk_overlap=config.document_processing.chunk_overlap
         )
     
     def load_document(self, path: str) -> List[Document]:
