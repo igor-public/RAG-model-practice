@@ -1,5 +1,5 @@
 from src.rag.BedrockManager import BedrockManager 
-from src.rag.RAGConfig import RAGConfig
+from src.rag.config.RAGConfig import RAGConfig
 
 
 def testInitializeBedrockManager():
