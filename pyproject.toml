@@ -8,8 +8,6 @@ packages = [{ include = "rag", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
-fastapi = "~0.115.12"
-uvicorn = { extras = ["standard"], version = "~0.29.0" }
 pydantic = "~2.7.0"
 langchain = "~0.3.24"
 pinecone-client = "~4.1.0"
@@ -18,6 +16,9 @@ pymupdf = "~1.23.0"
 pyyaml = "~6.0.1"
 langchain-community = "^0.3.25"
 sentence-transformers = "4.1.0"
+httpx = "0.28.1"
+fastapi = "~0.115.12"
+uvicorn = { extras = ["standard"], version = "~0.29.0" }
 
 [tool.poetry.scripts]
 rag-run = "rag.mainRAG:main"

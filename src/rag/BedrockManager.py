@@ -49,7 +49,7 @@ class BedrockManager:
     def __init__(self, config: RAGConfig, prompt_path: Path = Path("resources/system-prompt.yaml")):
         self.config = config
         
-        # Initialize the Bedrock client using boto3
+        #Bedrock client 
         
         self.session = boto3.Session()
         try:
@@ -108,6 +108,9 @@ class BedrockManager:
         if not toolConfig:
             raise ValueError("tools configuration is missing")
 
+
+        # Initiating the first call
+
         logger.debug(
             f"Invoking model {self.config.aws_bedrock.model_id} with TOOLS and no streaming ..."
         )
@@ -128,6 +131,8 @@ class BedrockManager:
 
         tool_calls = []
 
+        # Check if the response contains tool calls
+
         for block in response.get("output", {}).get("message", {}).get("content", []):
             tool_use = block.get("toolUse")
 
@@ -140,7 +145,8 @@ class BedrockManager:
                     }
                 )
 
-        # If the assistant asked to use "search_document", do the Pinecone query, update `messages`
+        # If the assistant asked to use "search_document", do the Pinecone query, update the`messages`
+        
         logger.debug(f"Tool calls: {tool_calls}")
 
     
