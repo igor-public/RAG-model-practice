@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 import logging
 
-from src.rag.RAGConfig import RAGConfig
+from src.rag.config.RAGConfig import RAGConfig
 from src.rag.PineconeManager import PineconeManager
 
 logging.basicConfig(
